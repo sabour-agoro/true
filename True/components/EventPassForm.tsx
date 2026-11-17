@@ -102,7 +102,7 @@ export function EventPassForm() {
     }
     setSaved(data);
     setStep(2);
-    setName(data.name);
+    //setName(data.name);
     setEmail(data.email ?? "");
     setOutfit(data.outfit);
     setSize(data.size);
