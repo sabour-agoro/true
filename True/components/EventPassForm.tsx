@@ -102,7 +102,6 @@ export function EventPassForm() {
     }
     setSaved(data);
     setStep(2);
-    //setName(data.name);
     setEmail(data.email ?? "");
     setOutfit(data.outfit);
     setSize(data.size);
@@ -121,7 +120,6 @@ export function EventPassForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           locale,
-          name,
           email,
           outfit: saved?.outfit ?? outfit,
           size: saved?.size ?? size,
@@ -147,7 +145,7 @@ export function EventPassForm() {
         const fedapay = await loadFedaPay();
         const widget = fedapay.init({
           public_key: data.publicKey,
-          environment: "live",
+          environment: (data as CheckoutPayload & { environment?: string }).environment ?? "live",
           locale,
           currency: { iso: "XOF" },
           transaction: {
@@ -236,10 +234,6 @@ export function EventPassForm() {
           )}
           {!saved && (
             <>
-              <label className="mt-6 block text-sm text-mist">
-                {t.event.name}
-                <input value={name} onChange={(event) => setName(event.target.value)} className="mt-2 w-full border border-line bg-transparent px-3 py-3 text-bone outline-none" />
-              </label>
               <label className="mt-4 block text-sm text-mist">
                 {t.event.mail}
                 <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full border border-line bg-transparent px-3 py-3 text-bone outline-none" />
