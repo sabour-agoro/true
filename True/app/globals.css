@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+:root,
+html[data-theme="dark"] {
+  --ink: #000000;
+  --panel: #111111;
+  --bone: #ffffff;
+  --mist: #8d8d8d;
+  --gold: #c9a24b;
+  --gold-soft: #e6d3a1;
+  --ivory: #ede6d6;
+  --line: rgb(255 255 255 / 0.14);
+  color-scheme: dark;
+}
+
+html[data-theme="light"] {
+  --ink: #f4f0e8;
+  --panel: #fffdf8;
+  --bone: #141414;
+  --mist: #6a645c;
+  --gold: #c9a24b;
+  --gold-soft: #8d6828;
+  --ivory: #ede6d6;
+  --line: rgb(20 20 20 / 0.12);
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-panel: var(--panel);
+  --color-bone: var(--bone);
+  --color-mist: var(--mist);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-ivory: var(--ivory);
+  --color-line: var(--line);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-cormorant), "Times New Roman", serif;
+  --font-display: var(--font-anton), Impact, sans-serif;
+}
+
+html {
+  background: var(--ink);
+  color: var(--bone);
+  scroll-behavior: auto;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--ink);
+  color: var(--bone);
+}
+
+::selection {
+  background: #c9a24b;
+  color: #000000;
+}
+
+:focus-visible {
+  outline: 1px solid #c9a24b;
+  outline-offset: 3px;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--ink);
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--bone) 22%, var(--ink));
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--bone);
+}
+
+.story-veil {
+  background: color-mix(in srgb, #000000 68%, transparent);
+}
+
+@media (pointer: fine) {
+  html.true-cursor,
+  html.true-cursor * {
+    cursor: none !important;
+  }
+
+  html.true-cursor input,
+  html.true-cursor textarea,
+  html.true-cursor select {
+    cursor: text !important;
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
