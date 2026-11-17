@@ -1,50 +1,57 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import QRCode from "qrcode";
 import { events } from "@/data/events";
 import { getProduct, productName } from "@/data/products";
-import { formatPrice } from "@/lib/format";
 import { settlePass } from "@/lib/pass-pay";
+import { passQrPayload } from "@/lib/pass-seal";
+import { PassSuiviView } from "@/components/PassSuiviView";
 
-export const metadata: Metadata = { title: "Pass" };
+export const metadata: Metadata = { title: "Pass · Suivi & Billet" };
 export const dynamic = "force-dynamic";
 
 export default async function PassPage({
   searchParams,
 }: {
-  searchParams: Promise<{ code?: string; session_id?: string; tx?: string }>;
+  searchParams: Promise<{ code?: string; session_id?: string; tx?: string; id?: string }>;
 }) {
-  const { code = "", session_id: sessionId, tx } = await searchParams;
-  const pass = code ? await settlePass(code, sessionId, tx) : null;
+  const { code = "", session_id: sessionId, tx, id } = await searchParams;
+  const txId = tx || id;
+  const pass = code ? await settlePass(code, sessionId, txId) : null;
   const outfit = pass ? getProduct(pass.outfit) : undefined;
+  const outfitName = outfit ? productName(outfit, "fr") : pass?.outfit ?? "";
+
+  let qrDataUrl: string | null = null;
+  if (pass) {
+    try {
+      qrDataUrl = await QRCode.toDataURL(passQrPayload(pass.code), {
+        width: 360,
+        margin: 2,
+        color: { dark: "#09090b", light: "#ffffff" },
+      });
+    } catch {
+      qrDataUrl = null;
+    }
+  }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-4 py-32">
-      <p className="text-[11px] tracking-[0.32em] text-gold uppercase">{events[0].name}</p>
+    <main className="min-h-screen">
       {pass ? (
-        <>
-          <h1 className="mt-3 font-serif text-5xl tracking-[0.08em]">{pass.unlocked ? "Pass débloqué" : "Paiement en cours"}</h1>
-          <p className="mt-6 font-serif text-3xl tracking-[0.2em]">{pass.code}</p>
-          <p className="mt-4 text-mist">
-            {pass.name} · {outfit ? productName(outfit, "fr") : pass.outfit} · {pass.size}
-          </p>
-          <p className="mt-2 text-bone">
-            {formatPrice(pass.paid, "fr")} payés · {formatPrice(pass.remaining, "fr")} restants
-          </p>
-          <p className="mt-6 text-sm leading-relaxed text-mist">
-            {pass.unlocked
-              ? "Le QR part par email. Montre-le à l'entrée."
-              : "Un email reprend ce code, la somme payée et ce qu'il reste. Tu ressaisis le code pour continuer."}
-          </p>
-        </>
+        <PassSuiviView
+          initialPass={pass}
+          outfitName={outfitName}
+          initialQrUrl={qrDataUrl}
+        />
       ) : (
-        <>
+        <div className="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-4 py-32 text-center">
+          <p className="text-[11px] tracking-[0.32em] text-gold uppercase">{events[0].name}</p>
           <h1 className="mt-3 font-serif text-5xl tracking-[0.08em]">Code introuvable</h1>
-          <p className="mt-6 text-mist">{"Ce pass n'existe pas encore."}</p>
-        </>
+          <p className="mt-6 text-mist">{"Ce pass n'existe pas encore ou le code est incorrect."}</p>
+          <Link href="/evenements" className="mt-10 inline-block text-[11px] tracking-[0.22em] text-gold uppercase">
+            {"← Retour à l'événement"}
+          </Link>
+        </div>
       )}
-      <Link href="/evenements" className="mt-10 text-[11px] tracking-[0.22em] text-gold uppercase">
-        {"Retour à l'événement"}
-      </Link>
     </main>
   );
 }

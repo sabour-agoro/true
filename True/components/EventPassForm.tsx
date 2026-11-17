@@ -139,6 +139,10 @@ export function EventPassForm() {
         setPaying(false);
         return;
       }
+      if (data.url) {
+        window.location.assign(data.url);
+        return;
+      }
       if (data.checkout && data.publicKey && data.amount && data.code && data.phone) {
         const fedapay = await loadFedaPay();
         const widget = fedapay.init({
@@ -158,13 +162,12 @@ export function EventPassForm() {
             phone_number: { number: data.phone, country: "tg" },
           },
           onComplete(result: { transaction?: { id?: number | string; status?: string } }) {
-            const status = result?.transaction?.status;
             const id = result?.transaction?.id;
-            if ((status !== "approved" && status !== "transferred") || !id) {
-              setPaying(false);
+            if (id) {
+              window.location.assign(`/evenements/suivi?code=${data.code}&tx=${id}`);
               return;
             }
-            window.location.assign(`/evenements/suivi?code=${data.code}&tx=${id}`);
+            setPaying(false);
           },
         });
         widget.open();

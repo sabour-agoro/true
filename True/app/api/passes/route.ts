@@ -5,7 +5,7 @@ import { clientKey, rateLimit } from "@/lib/rate-limit";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  if (!rateLimit(`pass-read:${clientKey(request)}`, 30, 15 * 60 * 1000)) {
+  if (!rateLimit(`pass-read:${clientKey(request)}`, 120, 15 * 60 * 1000)) {
     return Response.json({ error: "rate" }, { status: 429 });
   }
   const code = new URL(request.url).searchParams.get("code") ?? "";

@@ -65,7 +65,7 @@ export async function createMobileCheckout({
   if (!key) return { error: "config" as const };
 
   const origin = requestOrigin(request);
-  const callback = returnTo ?? (origin.startsWith("https://") ? `${origin}/panier/succes?provider=fedapay` : undefined);
+  const callback = returnTo ?? `${origin}/panier/succes?provider=fedapay`;
   const headers = {
     Authorization: `Bearer ${key}`,
     "Content-Type": "application/json",
@@ -140,8 +140,8 @@ export async function createMobileCheckout({
     tokenResponse = await fetch(`${fedapayBase()}/transactions/${id}/token`, { method: "POST", headers });
   }
   const tokenBody = (await tokenResponse.json().catch(() => null)) as unknown;
-  const url = nestedUrl(tokenBody);
-  if (!tokenResponse.ok || !url) {
+  const url = nestedUrl(tokenBody) || nestedUrl(createdBody);
+  if (!url) {
     console.error("fedapay token", tokenResponse.status, JSON.stringify(tokenBody).slice(0, 240));
     return { error: "fedapay" as const, reason: `token ${tokenResponse.status}` };
   }
@@ -212,14 +212,20 @@ export async function readFedaPayStatus(id: string) {
     if (typeof value === "string") code = value;
   }
   const description = typeof record.description === "string" ? record.description : "";
+  if (!code && description) {
+    const m = description.match(/\b([A-Z0-9]{8})\b/);
+    if (m) code = m[1];
+  }
   const mode = typeof record.mode === "string" ? record.mode : "";
   let seal = "";
   if (meta && typeof meta === "object" && "seal" in meta) {
     const value = (meta as { seal?: unknown }).seal;
     if (typeof value === "string") seal = value;
   }
+  const isApproved = status === "approved" || status === "transferred";
   return {
-    approved: status === "approved",
+    approved: isApproved,
+    status: typeof status === "string" ? status : "",
     amount: typeof amount === "number" && Number.isFinite(amount) ? amount : null,
     code,
     seal,

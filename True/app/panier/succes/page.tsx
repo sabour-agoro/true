@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CheckoutSuccess } from "@/components/CheckoutSuccess";
 import { getStripe } from "@/lib/stripe";
+import { readFedaPayStatus } from "@/lib/fedapay";
 
 export const metadata: Metadata = { title: "Paiement" };
 export const dynamic = "force-dynamic";
@@ -8,9 +9,9 @@ export const dynamic = "force-dynamic";
 export default async function CheckoutSuccessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ session_id?: string }>;
+  searchParams: Promise<{ session_id?: string; id?: string; status?: string; provider?: string }>;
 }) {
-  const { session_id: sessionId } = await searchParams;
+  const { session_id: sessionId, id: fedaId, status: fedaStatus } = await searchParams;
   const stripe = getStripe();
   let paid = false;
   let email: string | null = null;
@@ -24,6 +25,19 @@ export default async function CheckoutSuccessPage({
       amount = session.amount_total ?? 0;
     } catch (error) {
       console.error("stripe session", error instanceof Error ? error.message : error);
+    }
+  } else if (fedaId && /^\d+$/.test(fedaId)) {
+    try {
+      const remote = await readFedaPayStatus(fedaId);
+      if (remote?.approved) {
+        paid = true;
+        amount = remote.amount ?? 0;
+      } else if (fedaStatus === "approved") {
+        paid = true;
+      }
+    } catch (error) {
+      console.error("fedapay session check", error instanceof Error ? error.message : error);
+      if (fedaStatus === "approved") paid = true;
     }
   }
 

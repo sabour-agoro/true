@@ -107,12 +107,14 @@ export function publicPass(pass: Pass) {
   return {
     code: pass.code,
     name: pass.name,
+    email: pass.email,
     outfit: pass.outfit,
     size: pass.size,
     total: pass.total,
     paid: pass.paid,
     remaining: Math.max(0, pass.total - pass.paid),
     unlocked: pass.paid >= pass.total,
+    pending: pass.pending,
   };
 }
 

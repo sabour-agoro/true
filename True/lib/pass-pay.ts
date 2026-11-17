@@ -1,16 +1,17 @@
 import { getProduct, productName } from "@/data/products";
-import { normalizeTogoPhone, readFedaPayStatus } from "@/lib/fedapay";
+import { createMobileCheckout, normalizeTogoPhone, readFedaPayStatus } from "@/lib/fedapay";
 import { sendPassMails } from "@/lib/mail";
 import {
   confirmPending,
   createPass,
   findPass,
+  holdPayment,
   publicPass,
   recordApproved,
 } from "@/lib/passes";
 import { isPassAmount, isSize, outfitReady } from "@/lib/pass-rules";
 import { passSeal, validPassSeal } from "@/lib/pass-seal";
-import { getStripe } from "@/lib/stripe";
+import { getStripe, requestOrigin } from "@/lib/stripe";
 
 type PayBody = {
   locale?: unknown;
@@ -63,7 +64,43 @@ export async function startPassPayment(request: Request) {
 
   const phone = typeof body?.phone === "string" ? normalizeTogoPhone(body.phone) : null;
   if (!phone) return { error: "phone" as const, status: 400, code: pass.code };
+
+  const origin = requestOrigin(request);
+  const returnTo = `${origin}/evenements/suivi?code=${pass.code}`;
+  const fedaResult = await createMobileCheckout({
+    request,
+    method,
+    phone,
+    amount: due,
+    description,
+    returnTo,
+    customer: { firstname, lastname, email: pass.email },
+    custom_metadata: {
+      code: pass.code,
+      seal: passSeal(pass.code),
+    },
+  });
+
   const publicKey = process.env.NEXT_PUBLIC_FEDAPAY_PUBLIC_KEY;
+
+  if (!("error" in fedaResult)) {
+    await holdPayment(pass.code, { ref: String(fedaResult.id), amount: due, method, provider: "fedapay" });
+    return {
+      checkout: true,
+      url: fedaResult.url,
+      txId: fedaResult.id,
+      code: pass.code,
+      amount: due,
+      description,
+      phone,
+      firstname,
+      lastname,
+      email: pass.email,
+      publicKey,
+      status: 200,
+    };
+  }
+
   if (!publicKey) return { error: "config" as const, status: 503, code: pass.code };
   return {
     checkout: true,
@@ -109,21 +146,17 @@ export async function settlePass(code: string, sessionId?: string, txId?: string
     }
   }
 
-  if (pass.pending?.provider === "fedapay") {
-    const remote = await readFedaPayStatus(pass.pending.ref).catch(() => null);
-    if (remote?.approved && remote.amount === pass.pending.amount) {
-      const settled = await confirmPending(pass.code, pass.pending.ref, pass.pending.amount);
-      if (settled.pass && settled.justConfirmed) await sendPassMails(settled.pass).catch(() => false);
-      if (settled.pass) return publicPass(settled.pass);
-    }
-  }
+  // Check FedaPay: either via explicit txId or recorded pending reference
+  const checkTxId = txId || (pass.pending?.provider === "fedapay" ? pass.pending.ref : undefined);
 
-  if (txId && /^\d+$/.test(txId) && !pass.payments.some((payment) => payment.ref === txId)) {
-    const remote = await readFedaPayStatus(txId).catch(() => null);
-    const matches = remote?.code === pass.code && validPassSeal(pass.code, remote.seal);
-    if (remote?.approved && remote.amount && matches && isPassAmount(pass.paid, remote.amount)) {
+  if (checkTxId && /^\d+$/.test(checkTxId) && !pass.payments.some((payment) => payment.ref === checkTxId)) {
+    const remote = await readFedaPayStatus(checkTxId).catch(() => null);
+    const codeMatch = remote?.code === pass.code || remote?.description.includes(pass.code) || pass.pending?.ref === checkTxId;
+    const sealMatch = !remote?.seal || validPassSeal(pass.code, remote.seal);
+
+    if (remote?.approved && remote.amount && codeMatch && sealMatch && isPassAmount(pass.paid, remote.amount)) {
       const method = remote.mode === "moov_tg" ? "flooz" : "mixx";
-      const settled = await recordApproved(pass.code, { ref: txId, amount: remote.amount, method });
+      const settled = await recordApproved(pass.code, { ref: checkTxId, amount: remote.amount, method });
       if (settled.pass && settled.justConfirmed) await sendPassMails(settled.pass).catch(() => false);
       if (settled.pass) return publicPass(settled.pass);
     }
@@ -134,11 +167,18 @@ export async function settlePass(code: string, sessionId?: string, txId?: string
 
 export async function applyApprovedPayment(entity: Record<string, unknown>) {
   const meta = (entity.custom_metadata ?? entity.metadata) as Record<string, unknown> | undefined;
-  const code = typeof meta?.code === "string" ? meta.code : "";
+  let code = typeof meta?.code === "string" ? meta.code : "";
   const seal = typeof meta?.seal === "string" ? meta.seal : "";
   const amount = typeof entity.amount === "number" ? entity.amount : Number(entity.amount);
   const id = entity.id;
-  if (!validPassSeal(code, seal) || !Number.isInteger(amount) || (typeof id !== "number" && typeof id !== "string")) return false;
+
+  if (!code && typeof entity.description === "string") {
+    const m = entity.description.match(/\b([A-Z0-9]{8})\b/);
+    if (m) code = m[1];
+  }
+
+  if (!code || !Number.isInteger(amount) || (typeof id !== "number" && typeof id !== "string")) return false;
+  if (seal && !validPassSeal(code, seal)) return false;
 
   const outfit = typeof meta?.outfit === "string" ? meta.outfit : "";
   const size = meta?.size;
