@@ -57,7 +57,7 @@ export function EventPassForm() {
   const open = products.filter((product) => !isSoldOut(product));
   const [outfit, setOutfit] = useState(open[0]?.slug ?? "");
   const [size, setSize] = useState<Size | "">(open[0] ? firstAvailableSize(open[0]) ?? "" : "");
-  const [name, setName] = useState("");
+
   const [email, setEmail] = useState("");
   const [mode, setMode] = useState<"full" | "part">("full");
   const [amount, setAmount] = useState(PASS_START);

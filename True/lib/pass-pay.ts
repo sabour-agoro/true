@@ -43,10 +43,12 @@ export async function startPassPayment(request: Request) {
 
   let pass = existing;
   if (!pass) {
+    // Le champ 'name' n'est plus requis ; il peut rester vide.
     const name = typeof body?.name === "string" ? body.name.trim() : "";
+    // L'email devient optionnel : s'il est fourni, il doit être valide.
     const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
-    if (name.length < 2) return { error: "name" as const, status: 400 };
-    if (!validEmail(email)) return { error: "email" as const, status: 400 };
+    if (email && !validEmail(email)) return { error: "email" as const, status: 400 };
+
     if (!outfitReady(body?.outfit, body?.size) || !isSize(body?.size) || typeof body?.outfit !== "string") {
       return { error: "outfit" as const, status: 400 };
     }
