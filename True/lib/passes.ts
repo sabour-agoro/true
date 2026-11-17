@@ -46,12 +46,19 @@ function update<T>(change: (passes: Pass[]) => Promise<T> | T) {
 }
 
 async function readStore() {
-  if (process.env.BLOB_READ_WRITE_TOKEN) return readBlobPasses();
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    try {
+      const blobData = await readBlobPasses();
+      if (blobData.passes && blobData.passes.length > 0) return blobData;
+    } catch {
+      // fallback to local files
+    }
+  }
   for (const file of storeFiles()) {
     try {
       const text = await fs.readFile(file, "utf8");
       const parsed = JSON.parse(text) as Pass[];
-      if (Array.isArray(parsed)) return { passes: parsed, etag: null as string | null };
+      if (Array.isArray(parsed) && parsed.length > 0) return { passes: parsed, etag: null as string | null };
     } catch {
       continue;
     }
@@ -60,9 +67,14 @@ async function readStore() {
 }
 
 async function writeStore(passes: Pass[], etag: string | null) {
+  let blobSaved = false;
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    await writeBlobPasses(passes, etag);
-    return;
+    try {
+      await writeBlobPasses(passes, etag);
+      blobSaved = true;
+    } catch (err) {
+      console.error("writeStore blob error:", err);
+    }
   }
   let saved = false;
   for (const file of storeFiles()) {
@@ -74,9 +86,13 @@ async function writeStore(passes: Pass[], etag: string | null) {
       continue;
     }
   }
-  if (!saved) {
-    await fs.mkdir("/tmp", { recursive: true });
-    await fs.writeFile(TEMP, JSON.stringify(passes, null, 2));
+  if (!saved && !blobSaved) {
+    try {
+      await fs.mkdir("/tmp", { recursive: true });
+      await fs.writeFile(TEMP, JSON.stringify(passes, null, 2));
+    } catch {
+      // ignore tmp write error
+    }
   }
 }
 
