@@ -74,6 +74,8 @@ async function writeStore(passes: Pass[], etag: string | null) {
       blobSaved = true;
     } catch (err) {
       console.error("writeStore blob error:", err);
+      // Sur Vercel, /tmp est éphémère : ne jamais accepter un paiement qui n'est sauvegardé que là.
+      if (process.env.VERCEL) throw err;
     }
   }
   let saved = false;

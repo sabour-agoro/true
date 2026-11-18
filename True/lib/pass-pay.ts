@@ -84,6 +84,7 @@ export async function startPassPayment(request: Request) {
   });
 
   const publicKey = process.env.NEXT_PUBLIC_FEDAPAY_PUBLIC_KEY;
+  const environment = process.env.FEDAPAY_ENVIRONMENT === "sandbox" ? "sandbox" : "live";
 
   if (!("error" in fedaResult)) {
     await holdPayment(pass.code, { ref: String(fedaResult.id), amount: due, method, provider: "fedapay" });
@@ -99,6 +100,7 @@ export async function startPassPayment(request: Request) {
       lastname,
       email: pass.email,
       publicKey,
+      environment,
       status: 200,
     };
   }
@@ -114,6 +116,7 @@ export async function startPassPayment(request: Request) {
     lastname,
     email: pass.email,
     publicKey,
+    environment,
     metadata: {
       code: pass.code,
       seal: passSeal(pass.code),

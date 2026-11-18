@@ -40,7 +40,8 @@ export function PassSuiviView({
     let attempts = 0;
     const interval = setInterval(async () => {
       attempts += 1;
-      if (attempts > 30) {
+      // ~10 minutes : le client peut prendre du temps pour valider le code USSD
+      if (attempts > 200) {
         clearInterval(interval);
         setIsPolling(false);
         return;
@@ -113,6 +114,16 @@ export function PassSuiviView({
           </span>
           <span>En attente de confirmation sur votre téléphone (USSD / PIN)…</span>
         </div>
+      )}
+
+      {!isPolling && !pass.unlocked && (
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-4 rounded-full border border-gold/40 px-4 py-2 text-xs text-gold"
+        >
+          Vérifier à nouveau le paiement
+        </button>
       )}
 
       {/* TICKET CARD */}

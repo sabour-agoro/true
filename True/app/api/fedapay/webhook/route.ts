@@ -29,7 +29,9 @@ export async function POST(request: Request) {
     const entity = event.entity ?? event.data?.entity;
     if (entity) {
       try {
-        await applyApprovedPayment(entity);
+        const applied = await applyApprovedPayment(entity);
+        // Paiement approuvé non rattaché à un pass (ex. achat de la boutique) : à traiter manuellement.
+        if (!applied) console.error("fedapay webhook: approved transaction not matched", entity.id, entity.amount);
       } catch (error) {
         console.error("fedapay webhook", error instanceof Error ? error.message : error);
         return Response.json({ error: "store" }, { status: 500 });
