@@ -41,9 +41,13 @@ export default async function CheckoutSuccessPage({
     }
   }
 
+  // Paiement mobile encore non approuvé (validation USSD en cours) : on propose de revérifier.
+  const pending = !paid && Boolean(fedaId && /^\d+$/.test(fedaId));
+  const retryHref = pending ? `/panier/succes?id=${fedaId}&provider=fedapay` : undefined;
+
   return (
     <main>
-      <CheckoutSuccess paid={paid} email={email} amount={amount} />
+      <CheckoutSuccess paid={paid} email={email} amount={amount} pending={pending} retryHref={retryHref} />
     </main>
   );
 }

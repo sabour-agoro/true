@@ -1,9 +1,16 @@
 import { findPass } from "@/lib/passes";
 import { generateTicketPng } from "@/lib/pass-ticket";
+import { clientKey, rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
+  if (!rateLimit(`pass-download:${clientKey(request)}`, 30, 15 * 60 * 1000)) {
+    return new Response(JSON.stringify({ error: "rate" }), {
+      status: 429,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
   const url = new URL(request.url);
   const code = url.searchParams.get("code")?.trim() ?? "";
 
