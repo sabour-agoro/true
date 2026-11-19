@@ -1,12 +1,11 @@
 import sharp from "sharp";
 import QRCode from "qrcode";
-import { getProduct, productName } from "@/data/products";
+import { chemiseLabel } from "@/data/chemises";
 import { passQrPayload } from "@/lib/pass-seal";
 import type { Pass } from "@/lib/passes";
 
 export async function generateTicketPng(pass: Pass): Promise<Buffer> {
-  const outfit = getProduct(pass.outfit);
-  const outfitTitle = outfit ? productName(outfit, "fr") : pass.outfit;
+  const outfitTitle = chemiseLabel(pass.outfit);
   const isUnlocked = pass.paid >= pass.total;
 
   const qrBuffer = await QRCode.toBuffer(passQrPayload(pass.code), {

@@ -14,6 +14,8 @@ function isSize(value: unknown): value is Size {
 }
 
 export async function POST(request: Request) {
+  // Boutique en pause : paiement des pièces désactivé (seuls les pass passent par /api/passes).
+  if (process.env.SHOP_ENABLED !== "true") return Response.json({ error: "disabled" }, { status: 404 });
   const body = (await request.json().catch(() => null)) as {
     locale?: unknown;
     method?: unknown;

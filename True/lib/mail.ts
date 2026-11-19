@@ -1,4 +1,4 @@
-import { getProduct, productName } from "@/data/products";
+import { chemiseLabel } from "@/data/chemises";
 import { passQrPayload } from "@/lib/pass-seal";
 import { generateTicketPng } from "@/lib/pass-ticket";
 import type { Pass } from "@/lib/passes";
@@ -21,8 +21,7 @@ export async function sendPassMails(pass: Pass) {
   const mailer = transport();
   if (!mailer) return false;
 
-  const outfit = getProduct(pass.outfit);
-  const outfitName = outfit ? productName(outfit, pass.locale) : pass.outfit;
+  const outfitName = chemiseLabel(pass.outfit);
   const remaining = Math.max(0, pass.total - pass.paid);
   const unlocked = remaining === 0;
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
