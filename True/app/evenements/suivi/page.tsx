@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { events } from "@/data/events";
-import { getProduct, productName } from "@/data/products";
+import { chemiseLabel } from "@/data/chemises";
 import { settlePass } from "@/lib/pass-pay";
 import { passQrPayload } from "@/lib/pass-seal";
 import { PassSuiviView } from "@/components/PassSuiviView";
@@ -18,8 +18,7 @@ export default async function PassPage({
   const { code = "", session_id: sessionId, tx, id } = await searchParams;
   const txId = tx || id;
   const pass = code ? await settlePass(code, sessionId, txId) : null;
-  const outfit = pass ? getProduct(pass.outfit) : undefined;
-  const outfitName = outfit ? productName(outfit, "fr") : pass?.outfit ?? "";
+  const outfitName = pass ? chemiseLabel(pass.outfit) : "";
 
   let qrDataUrl: string | null = null;
   if (pass) {

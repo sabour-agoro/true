@@ -7,6 +7,21 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
   },
+  // Boutique mise en pause : seules l'accueil et la réservation sont publiques.
+  async redirects() {
+    return [
+      { source: "/shop", destination: "/", permanent: false },
+      { source: "/produit/:slug*", destination: "/", permanent: false },
+      { source: "/panier", destination: "/", permanent: false },
+      { source: "/panier/succes", destination: "/", permanent: false },
+      { source: "/compte", destination: "/", permanent: false },
+      { source: "/livraison", destination: "/", permanent: false },
+      { source: "/a-propos", destination: "/", permanent: false },
+      { source: "/contact", destination: "/", permanent: false },
+      { source: "/evenements", destination: "/", permanent: false },
+      { source: "/evenements/pass", destination: "/reservation", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {

@@ -1,4 +1,4 @@
-import { getProduct, productName } from "@/data/products";
+import { chemiseLabel } from "@/data/chemises";
 import { createMobileCheckout, normalizeTogoPhone, readFedaPayStatus } from "@/lib/fedapay";
 import { sendPassMails } from "@/lib/mail";
 import {
@@ -35,7 +35,8 @@ export async function startPassPayment(request: Request) {
   const locale = body?.locale === "en" ? "en" : "fr";
   const method = body?.method === "mixx" || body?.method === "flooz" ? body.method : null;
   const amount = typeof body?.amount === "number" && Number.isInteger(body.amount) ? body.amount : 0;
-  const mode = body?.mode === "full" ? "full" : "part";
+  // Paiement unique : le pass se règle toujours en une fois.
+  const mode = "full" as const;
   if (!method) return { error: "method" as const, status: 400 };
 
   const existing = typeof body?.code === "string" && body.code.trim() ? await findPass(body.code) : null;
@@ -59,8 +60,7 @@ export async function startPassPayment(request: Request) {
   if (pass.paid >= pass.total) return { error: "paid" as const, status: 400, code: pass.code };
   if (!isPassAmount(pass.paid, due)) return { error: "amount" as const, status: 400, code: pass.code };
 
-  const outfit = getProduct(pass.outfit);
-  const description = `Lancement officiel ${pass.code} · ${outfit ? productName(outfit, "fr") : pass.outfit} ${pass.size}`.slice(0, 180);
+  const description = `Lancement officiel ${pass.code} · ${chemiseLabel(pass.outfit)} ${pass.size}`.slice(0, 180);
   const [firstname, ...rest] = pass.name.split(/\s+/);
   const lastname = rest.join(" ") || "TRUE";
 
