@@ -25,8 +25,8 @@ export const logoLabel: Record<Logo, string> = {
 };
 
 export const logoFile: Record<Logo, string> = {
-  horizon: "/logos/logo-horizon.svg",
-  spirale: "/logos/logo-spirale.svg",
+  horizon: "/logos/logo-horizon.png",
+  spirale: "/logos/logo-spirale.png",
   true: "/logos/logo-true.svg",
 };
 
@@ -34,6 +34,7 @@ export const logoFile: Record<Logo, string> = {
 const photos: Record<string, string> = {
   "longues-blanche-horizon": "/products/chemise-blanche-horizon-dos.png",
   "longues-blanche-spirale": "/products/chemise-blanche-spirale-dos.png",
+  "longues-noire-horizon": "/products/chemise-noire-horizon-dos.jpg",
   "courtes-blanche-spirale": "/products/chemise-blanche-mc-spirale-dos.png",
   "courtes-blanche-true": "/products/chemise-blanche-mc-true-poitrine.png",
   "courtes-noire-spirale": "/products/chemise-noire-mc-spirale-dos.png",

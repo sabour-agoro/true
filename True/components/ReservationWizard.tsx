@@ -84,8 +84,10 @@ function Choice({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "border px-4 py-4 text-left transition",
-        active ? "border-gold bg-gold/10 text-bone" : "border-line text-bone/70 hover:border-gold/60",
+        "border px-4 py-4 text-left transition-all duration-150 active:scale-[0.97] select-none",
+        active
+          ? "border-gold bg-gold/10 text-bone shadow-[inset_0_0_0_1px_theme(colors.gold)]"
+          : "border-line text-bone/70 hover:border-gold/60 hover:text-bone/90 active:bg-white/5",
       )}
     >
       <span className="block text-[13px] tracking-[0.14em] uppercase">{children}</span>
@@ -211,7 +213,21 @@ export function ReservationWizard() {
       <div>
         <ol className="mb-8 flex gap-3 text-[11px] tracking-[0.22em] uppercase">
           {steps.map((label, index) => (
-            <li key={label} className={cn("border-b pb-2", step === index + 1 ? "border-gold text-gold" : "border-line text-mist")}>
+            <li
+              key={label}
+              className={cn(
+                "border-b pb-2 cursor-pointer transition-colors duration-150",
+                step === index + 1
+                  ? "border-gold text-gold"
+                  : index + 1 < step
+                    ? "border-bone/40 text-bone/60 hover:border-gold/50 hover:text-bone/80"
+                    : "border-line text-mist cursor-default",
+              )}
+              onClick={() => {
+                // Permettre de revenir aux étapes précédentes seulement
+                if (index + 1 < step) setStep((index + 1) as 1 | 2 | 3);
+              }}
+            >
               {index + 1}. {label}
             </li>
           ))}
@@ -239,8 +255,12 @@ export function ReservationWizard() {
                 ))}
               </div>
             </div>
-            <button type="button" onClick={() => setStep(2)} className="w-full bg-gold px-6 py-4 text-[11px] tracking-[0.22em] text-ink uppercase">
-              Continuer
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              className="w-full bg-gold px-6 py-4 text-[11px] tracking-[0.22em] text-ink uppercase transition-all duration-150 hover:bg-gold/90 active:scale-[0.98] active:bg-gold/80"
+            >
+              Continuer →
             </button>
           </section>
         )}
@@ -258,11 +278,19 @@ export function ReservationWizard() {
               </div>
             </div>
             <div className="flex gap-3">
-              <button type="button" onClick={() => setStep(1)} className="border border-line px-6 py-4 text-[11px] tracking-[0.22em] uppercase">
-                Retour
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="border border-line px-6 py-4 text-[11px] tracking-[0.22em] uppercase transition-all duration-150 hover:border-gold/50 hover:text-bone active:scale-[0.97] active:bg-white/5"
+              >
+                ← Retour
               </button>
-              <button type="button" onClick={() => setStep(3)} className="flex-1 bg-gold px-6 py-4 text-[11px] tracking-[0.22em] text-ink uppercase">
-                Continuer
+              <button
+                type="button"
+                onClick={() => setStep(3)}
+                className="flex-1 bg-gold px-6 py-4 text-[11px] tracking-[0.22em] text-ink uppercase transition-all duration-150 hover:bg-gold/90 active:scale-[0.98] active:bg-gold/80"
+              >
+                Continuer →
               </button>
             </div>
           </section>
@@ -323,14 +351,18 @@ export function ReservationWizard() {
             )}
 
             <div className="flex gap-3">
-              <button type="button" onClick={() => setStep(2)} className="border border-line px-6 py-4 text-[11px] tracking-[0.22em] uppercase">
-                Retour
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="border border-line px-6 py-4 text-[11px] tracking-[0.22em] uppercase transition-all duration-150 hover:border-gold/50 hover:text-bone active:scale-[0.97] active:bg-white/5"
+              >
+                ← Retour
               </button>
               <button
                 type="button"
                 onClick={pay}
                 disabled={paying}
-                className="flex-1 bg-gold px-6 py-4 text-[11px] tracking-[0.22em] text-ink uppercase disabled:opacity-50"
+                className="flex-1 bg-gold px-6 py-4 text-[11px] tracking-[0.22em] text-ink uppercase transition-all duration-150 hover:bg-gold/90 active:scale-[0.98] active:bg-gold/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
               >
                 {paying ? "Ouverture du paiement…" : `Payer ${PASS_PRICE.toLocaleString("fr-FR")} F CFA`}
               </button>

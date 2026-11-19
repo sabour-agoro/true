@@ -33,7 +33,7 @@ const cormorant = Cormorant_Garamond({
 export const metadata: Metadata = {
   title: { default: "TRUE", template: "%s — TRUE" },
   description: site.slogan,
-  icons: { icon: "/logos/logo-horizon.svg" },
+  icons: { icon: "/logos/logo-horizon.png" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
