@@ -7,6 +7,6 @@ export const site = {
   yas: "93499278",
   instagram: "https://instagram.com/",
   collection: "Collection 01",
-  eventDateLabel: "Date à annoncer",
+  eventDateLabel: "03/01/2027",
   eventVenueLabel: "Lieu à annoncer",
 };
