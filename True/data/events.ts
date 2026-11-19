@@ -28,7 +28,7 @@ export const events: EventNight[] = [
     slug: "nuit-horizon",
     name: "Lancement officiel de la marque",
     nameEn: "Official brand launch",
-    startsAt: "2026-01-03T20:00:00+00:00",
+    startsAt: "2027-01-03T20:00:00+00:00",
     city: "Lomé",
     venue: "Lieu à définir",
     venueEn: "Venue to be announced",

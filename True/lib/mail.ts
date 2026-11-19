@@ -1,4 +1,5 @@
-import { chemiseLabel } from "@/data/chemises";
+import { chemiseLabel, colorLabel, logoLabel, parseChemiseKey, sleeveLabel } from "@/data/chemises";
+import { site } from "@/data/site";
 import { passQrPayload } from "@/lib/pass-seal";
 import { generateTicketPng } from "@/lib/pass-ticket";
 import type { Pass } from "@/lib/passes";
@@ -79,21 +80,70 @@ export async function sendPassMails(pass: Pass) {
     `
     : undefined;
 
-  await mailer.sendMail({
-    from,
-    to: pass.email,
-    subject: unlocked ? (french ? "Ton pass — lancement officiel TRUE" : "Your official launch pass TRUE") : french ? "Ton code TRUE" : "Your TRUE code",
-    text: customerText,
-    html: customerHtml,
-    attachments,
-  });
+  const fit = parseChemiseKey(pass.outfit);
+  const lastMethod = pass.payments[pass.payments.length - 1]?.method ?? pass.pending?.method;
+  const methodLabel = lastMethod === "flooz" ? "Flooz (Moov)" : "Mixx by Yas (TOGOCEL)";
+  const ownerText = [
+    `Nouveau pass payé · ${pass.code}`,
+    "",
+    `Nom : ${pass.name || "non renseigné"}`,
+    `Téléphone : ${pass.phone ? `+228 ${pass.phone}` : "non renseigné"}`,
+    `E-mail : ${pass.email || "non renseigné"}`,
+    "",
+    "À produire :",
+    `Couleur : ${fit ? colorLabel[fit.color] : "?"}`,
+    `Manches : ${fit ? sleeveLabel[fit.sleeve] : "?"}`,
+    `Logo : ${fit ? `${logoLabel[fit.logo]}${fit.logo === "true" ? " (poitrine)" : " (dos)"}` : "?"}`,
+    `Taille : ${pass.size}`,
+    "",
+    `Montant payé : ${pass.paid.toLocaleString("fr-FR")} F CFA`,
+    `Paiement : ${methodLabel}`,
+    `Événement : ${site.eventDateLabel} · ${site.eventVenueLabel}`,
+  ].join("\n");
 
+  const ownerHtml = `
+  <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f4f5;padding:24px;">
+    <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;padding:24px;border:1px solid #e4e4e7;">
+      <p style="margin:0 0 4px;font-size:12px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">Nouveau pass payé</p>
+      <h1 style="margin:0 0 16px;font-size:24px;color:#09090b;font-family:monospace;letter-spacing:3px;">${pass.code}</h1>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;color:#18181b;">
+        <tr><td style="padding:6px 0;color:#71717a;">Nom</td><td style="padding:6px 0;font-weight:600;">${pass.name || "non renseigné"}</td></tr>
+        <tr><td style="padding:6px 0;color:#71717a;">Téléphone</td><td style="padding:6px 0;font-weight:600;">${pass.phone ? `+228 ${pass.phone}` : "non renseigné"}</td></tr>
+        <tr><td style="padding:6px 0;color:#71717a;">E-mail</td><td style="padding:6px 0;">${pass.email || "non renseigné"}</td></tr>
+      </table>
+      <div style="margin:18px 0;padding:16px;background:#fafafa;border:1px solid #e4e4e7;border-radius:8px;">
+        <p style="margin:0 0 10px;font-size:12px;letter-spacing:2px;color:#71717a;text-transform:uppercase;">À produire</p>
+        <table style="width:100%;border-collapse:collapse;font-size:15px;color:#09090b;">
+          <tr><td style="padding:4px 0;color:#71717a;width:110px;">Couleur</td><td style="padding:4px 0;font-weight:700;">${fit ? colorLabel[fit.color] : "?"}</td></tr>
+          <tr><td style="padding:4px 0;color:#71717a;">Manches</td><td style="padding:4px 0;font-weight:700;">${fit ? sleeveLabel[fit.sleeve] : "?"}</td></tr>
+          <tr><td style="padding:4px 0;color:#71717a;">Logo</td><td style="padding:4px 0;font-weight:700;">${fit ? `${logoLabel[fit.logo]} · ${fit.logo === "true" ? "poitrine" : "dos"}` : "?"}</td></tr>
+          <tr><td style="padding:4px 0;color:#71717a;">Taille</td><td style="padding:4px 0;font-weight:700;font-size:18px;">${pass.size}</td></tr>
+        </table>
+      </div>
+      <p style="margin:0;font-size:13px;color:#52525b;">Montant payé : <strong>${pass.paid.toLocaleString("fr-FR")} F CFA</strong> · ${methodLabel}</p>
+      <p style="margin:6px 0 0;font-size:13px;color:#52525b;">Événement : ${site.eventDateLabel} · ${site.eventVenueLabel}</p>
+    </div>
+  </div>`;
+
+  // Le patron reçoit toujours le mail ; le client seulement s'il a laissé un e-mail.
   await mailer.sendMail({
     from,
     to: owner,
-    subject: `TRUE · ${pass.name} · ${pass.paid} / ${pass.total}`,
-    text: `${pass.name} <${pass.email}>\nCode ${pass.code}\n${outfitName} · ${pass.size}\nPayé ${pass.paid} F CFA · reste ${remaining} F CFA`,
+    subject: `TRUE · Pass payé · ${fit ? `${colorLabel[fit.color]} ${sleeveLabel[fit.sleeve]} ${logoLabel[fit.logo]}` : outfitName} · ${pass.size} · ${pass.code}`,
+    text: ownerText,
+    html: ownerHtml,
   });
+
+  if (pass.email) {
+    await mailer.sendMail({
+      from,
+      to: pass.email,
+      subject: unlocked ? (french ? "Ton pass — lancement officiel TRUE" : "Your official launch pass TRUE") : french ? "Ton code TRUE" : "Your TRUE code",
+      text: customerText,
+      html: customerHtml,
+      attachments,
+    });
+  }
 
   return true;
 }

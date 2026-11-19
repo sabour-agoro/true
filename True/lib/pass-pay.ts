@@ -87,7 +87,7 @@ export async function startPassPayment(request: Request) {
   const environment = process.env.FEDAPAY_ENVIRONMENT === "sandbox" ? "sandbox" : "live";
 
   if (!("error" in fedaResult)) {
-    await holdPayment(pass.code, { ref: String(fedaResult.id), amount: due, method, provider: "fedapay" });
+    await holdPayment(pass.code, { ref: String(fedaResult.id), amount: due, method, provider: "fedapay" }, phone);
     return {
       checkout: true,
       url: fedaResult.url,

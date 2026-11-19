@@ -30,6 +30,7 @@ export type Pass = {
   paid: number;
   locale: "fr" | "en";
   payments: PassPayment[];
+  phone?: string;
   pending: { ref: string; amount: number; method: string; provider: "stripe" | "fedapay" } | null;
   createdAt: string;
 };
@@ -177,11 +178,12 @@ export async function createPass(input: { name: string; email: string; outfit: s
   });
 }
 
-export async function holdPayment(code: string, pending: NonNullable<Pass["pending"]>) {
+export async function holdPayment(code: string, pending: NonNullable<Pass["pending"]>, phone?: string) {
   return update((passes) => {
     const pass = passes.find((item) => item.code === code);
     if (!pass) return null;
     pass.pending = pending;
+    if (phone) pass.phone = phone;
     return pass;
   });
 }
