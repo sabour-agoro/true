@@ -40,6 +40,66 @@ const photos: Record<string, string> = {
   "courtes-noire-spirale": "/products/chemise-noire-mc-spirale-dos.png",
 };
 
+export type OutfitItem = {
+  key: string;
+  sleeve: Sleeve;
+  color: Color;
+  logo: Logo;
+  name: string;
+  photo: string;
+};
+
+export const AVAILABLE_OUTFITS: OutfitItem[] = [
+  {
+    key: "longues-blanche-horizon",
+    sleeve: "longues",
+    color: "blanche",
+    logo: "horizon",
+    name: "Chemise blanche manches longues · Horizon",
+    photo: "/products/chemise-blanche-horizon-dos.png",
+  },
+  {
+    key: "longues-noire-horizon",
+    sleeve: "longues",
+    color: "noire",
+    logo: "horizon",
+    name: "Chemise noire manches longues · Horizon",
+    photo: "/products/chemise-noire-horizon-dos.jpg",
+  },
+  {
+    key: "courtes-blanche-spirale",
+    sleeve: "courtes",
+    color: "blanche",
+    logo: "spirale",
+    name: "Chemise blanche manches courtes · Spirale",
+    photo: "/products/chemise-blanche-mc-spirale-dos.png",
+  },
+  {
+    key: "courtes-noire-spirale",
+    sleeve: "courtes",
+    color: "noire",
+    logo: "spirale",
+    name: "Chemise noire manches courtes · Spirale",
+    photo: "/products/chemise-noire-mc-spirale-dos.png",
+  },
+  {
+    key: "longues-blanche-spirale",
+    sleeve: "longues",
+    color: "blanche",
+    logo: "spirale",
+    name: "Chemise blanche manches longues · Spirale",
+    photo: "/products/chemise-blanche-spirale-dos.png",
+  },
+  {
+    key: "courtes-blanche-true",
+    sleeve: "courtes",
+    color: "blanche",
+    logo: "true",
+    name: "Chemise blanche manches courtes · TRUE poitrine",
+    photo: "/products/chemise-blanche-mc-true-poitrine.png",
+  },
+];
+
 /** Identifiant stocké dans le pass : « courtes-noire-spirale ». */
 export function chemiseKey(sleeve: Sleeve, color: Color, logo: Logo) {
   return `${sleeve}-${color}-${logo}`;

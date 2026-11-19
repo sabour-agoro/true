@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CHEMISE_SIZES,
   COLORS,
@@ -67,70 +67,42 @@ function loadFedaPay() {
   });
 }
 
-function Choice({
-  active,
-  onClick,
-  children,
-  sub,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  sub?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "border px-4 py-4 text-left transition-all duration-150 active:scale-[0.97] select-none",
-        active
-          ? "border-gold bg-gold/10 text-bone shadow-[inset_0_0_0_1px_theme(colors.gold)]"
-          : "border-line text-bone/70 hover:border-gold/60 hover:text-bone/90 active:bg-white/5",
-      )}
-    >
-      <span className="block text-[13px] tracking-[0.14em] uppercase">{children}</span>
-      {sub && <span className="mt-1 block text-xs text-mist">{sub}</span>}
-    </button>
-  );
-}
-
-function Preview({ sleeve, color, logo }: { sleeve: Sleeve; color: Color; logo: Logo }) {
-  const photo = chemisePhoto(sleeve, color, logo);
-  return (
-    <div className="relative mx-auto aspect-[4/5] w-full max-w-sm overflow-hidden border border-line bg-panel">
-      {photo ? (
-        <Image src={photo} alt={`Chemise ${colorLabel[color].toLowerCase()} ${sleeveLabel[sleeve].toLowerCase()}, logo ${logoLabel[logo]}`} fill sizes="(min-width: 768px) 384px, 90vw" className="object-contain" priority />
-      ) : (
-        <div className={cn("flex h-full w-full flex-col items-center justify-center gap-5 p-8", color === "noire" ? "bg-[#0a0a0a]" : "bg-[#f4f0e8]")}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={logoFile[logo]}
-            alt={`Logo ${logoLabel[logo]}`}
-            className={cn("max-h-40 w-auto", color === "noire" && logo === "true" && "invert")}
-          />
-          <p className={cn("text-center text-[11px] tracking-[0.2em] uppercase", color === "noire" ? "text-bone/60" : "text-[#141414]/60")}>
-            Aperçu du logo · photo de la chemise à venir
-          </p>
-        </div>
-      )}
-    </div>
-  );
+function getValidLogos(sleeve: Sleeve, color: Color): Logo[] {
+  if (sleeve === "longues" && color === "noire") return ["horizon"];
+  if (sleeve === "longues" && color === "blanche") return ["horizon", "spirale"];
+  if (sleeve === "courtes" && color === "noire") return ["spirale"];
+  if (sleeve === "courtes" && color === "blanche") return ["spirale", "true"];
+  return ["spirale"];
 }
 
 export function ReservationWizard() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
+
+  // Étape 1 : Manches & Couleur
   const [sleeve, setSleeve] = useState<Sleeve>("courtes");
   const [color, setColor] = useState<Color>("noire");
+
+  // Étape 2 : Logo & Taille
   const [logo, setLogo] = useState<Logo>("spirale");
-  const [size, setSize] = useState<ChemiseSize | "">("");
+  const [size, setSize] = useState<ChemiseSize>("M");
+
+  // Étape 3 : Coordonnées & Paiement
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [method, setMethod] = useState<"mixx" | "flooz">("mixx");
   const [phone, setPhone] = useState("");
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Synchroniser le logo si la combinaison manche/couleur change
+  useEffect(() => {
+    const valid = getValidLogos(sleeve, color);
+    if (!valid.includes(logo)) {
+      setLogo(valid[0]);
+    }
+  }, [sleeve, color, logo]);
+
+  const photo = chemisePhoto(sleeve, color, logo);
+  const availableLogos = getValidLogos(sleeve, color);
 
   async function pay() {
     if (paying) return;
@@ -147,7 +119,6 @@ export function ReservationWizard() {
         body: JSON.stringify({
           locale: "fr",
           name,
-          email,
           outfit: chemiseKey(sleeve, color, logo),
           size,
           mode: "full",
@@ -176,9 +147,9 @@ export function ReservationWizard() {
           currency: { iso: "XOF" },
           transaction: { amount: data.amount, description: data.description, custom_metadata: data.metadata ?? { code } },
           customer: {
-            email: data.email,
-            firstname: data.firstname,
-            lastname: data.lastname,
+            email: data.email ?? "client@true.tg",
+            firstname: data.firstname ?? name,
+            lastname: data.lastname ?? "",
             phone_number: { number: data.phone, country: "tg" },
           },
           onComplete(result: { transaction?: { id?: number | string } }) {
@@ -198,171 +169,375 @@ export function ReservationWizard() {
     }
   }
 
-  const steps = ["Chemise", "Logo", "Paiement"];
+  const steps = [
+    { num: 1, label: "Manches & Couleur" },
+    { num: 2, label: "Logo & Taille" },
+    { num: 3, label: "Paiement" },
+  ];
 
   return (
-    <div className="grid gap-10 md:grid-cols-[1fr_1fr] md:items-start">
+    <div className="grid gap-10 md:grid-cols-[1fr_1.1fr] md:items-start">
+      {/* Aperçu grand format à gauche */}
       <div className="md:sticky md:top-28">
-        <Preview sleeve={sleeve} color={color} logo={logo} />
-        <p className="mt-4 text-center text-sm text-mist">
-          {`Chemise ${colorLabel[color].toLowerCase()}, ${sleeveLabel[sleeve].toLowerCase()}, logo ${logoLabel[logo]}`}
-          {size ? ` · taille ${size}` : ""}
-        </p>
+        <div className="relative mx-auto aspect-[4/5] w-full max-w-md overflow-hidden border border-line bg-panel shadow-2xl">
+          {photo ? (
+            <Image
+              src={photo}
+              alt={`Chemise ${colorLabel[color].toLowerCase()} ${sleeveLabel[sleeve].toLowerCase()}, logo ${logoLabel[logo]}`}
+              fill
+              sizes="(min-width: 768px) 440px, 90vw"
+              className="object-contain p-4 transition-all duration-300"
+              priority
+            />
+          ) : (
+            <div className="flex h-full w-full flex-col items-center justify-center p-8 bg-panel">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoFile[logo]} alt={`Logo ${logoLabel[logo]}`} className="max-h-36 w-auto" />
+            </div>
+          )}
+
+          {/* Badges d'information */}
+          <span className="absolute top-3 left-3 bg-ink/80 px-3 py-1.5 text-[10px] tracking-[0.18em] uppercase text-gold backdrop-blur-md border border-gold/40">
+            {sleeveLabel[sleeve]} · {colorLabel[color]}
+          </span>
+          <span className="absolute top-3 right-3 bg-ink/80 px-3 py-1.5 text-[10px] tracking-[0.18em] uppercase text-bone backdrop-blur-md border border-line">
+            Logo {logoLabel[logo]}
+          </span>
+        </div>
+
+        <div className="mt-4 text-center">
+          <h3 className="font-serif text-2xl text-bone">
+            Chemise {colorLabel[color].toLowerCase()} {sleeveLabel[sleeve].toLowerCase()}
+          </h3>
+          <p className="mt-1 text-sm text-gold">
+            Logo {logoLabel[logo]} · Taille {size} · Pass {PASS_PRICE.toLocaleString("fr-FR")} F CFA
+          </p>
+        </div>
       </div>
 
+      {/* Étapes à droite */}
       <div>
-        <ol className="mb-8 flex gap-3 text-[11px] tracking-[0.22em] uppercase">
-          {steps.map((label, index) => (
-            <li
-              key={label}
-              className={cn(
-                "border-b pb-2 cursor-pointer transition-colors duration-150",
-                step === index + 1
-                  ? "border-gold text-gold"
-                  : index + 1 < step
-                    ? "border-bone/40 text-bone/60 hover:border-gold/50 hover:text-bone/80"
-                    : "border-line text-mist cursor-default",
-              )}
+        {/* Navigation des étapes en haut */}
+        <div className="mb-8 flex border-b border-line pb-3 gap-4 sm:gap-6 text-[11px] tracking-[0.2em] uppercase">
+          {steps.map((item) => (
+            <button
+              key={item.num}
+              type="button"
               onClick={() => {
-                // Permettre de revenir aux étapes précédentes seulement
-                if (index + 1 < step) setStep((index + 1) as 1 | 2 | 3);
+                // Permettre de naviguer aux étapes déjà débloquées
+                if (item.num <= step) setStep(item.num as 1 | 2 | 3);
               }}
+              className={cn(
+                "pb-1 transition-all text-left",
+                step === item.num
+                  ? "border-b-2 border-gold text-gold font-bold"
+                  : item.num < step
+                    ? "text-bone/80 hover:text-gold cursor-pointer"
+                    : "text-mist cursor-default",
+              )}
             >
-              {index + 1}. {label}
-            </li>
+              {item.num}. {item.label}
+            </button>
           ))}
-        </ol>
+        </div>
 
+        {/* ======================================================== */}
+        {/* ÉTAPE 1 : MANCHES & COULEUR                              */}
+        {/* ======================================================== */}
         {step === 1 && (
           <section className="space-y-8">
+            {/* Choix des manches */}
             <div>
-              <h2 className="font-display text-3xl uppercase">Manches</h2>
+              <h2 className="font-display text-2xl uppercase tracking-wider">1. Type de manches</h2>
               <div className="mt-4 grid grid-cols-2 gap-3">
-                {SLEEVES.map((item) => (
-                  <Choice key={item} active={sleeve === item} onClick={() => setSleeve(item)}>
-                    {sleeveLabel[item]}
-                  </Choice>
-                ))}
+                {SLEEVES.map((item) => {
+                  const active = sleeve === item;
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setSleeve(item)}
+                      className={cn(
+                        "p-5 text-left border transition-all duration-150 active:scale-[0.98]",
+                        active
+                          ? "border-gold bg-gold/15 text-bone ring-1 ring-gold shadow-[0_0_15px_rgba(201,162,75,0.25)]"
+                          : "border-line text-bone/70 hover:border-gold/50 hover:bg-white/5",
+                      )}
+                    >
+                      <span className="block text-sm font-bold tracking-[0.14em] uppercase">{sleeveLabel[item]}</span>
+                      <span className="mt-1 block text-xs text-mist">
+                        {item === "courtes" ? "Coupe fluide et légère" : "Coupe ajustée élégante"}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
+
+            {/* Choix de la couleur */}
             <div>
-              <h2 className="font-display text-3xl uppercase">Couleur</h2>
+              <h2 className="font-display text-2xl uppercase tracking-wider">2. Couleur</h2>
               <div className="mt-4 grid grid-cols-2 gap-3">
-                {COLORS.map((item) => (
-                  <Choice key={item} active={color === item} onClick={() => setColor(item)}>
-                    {colorLabel[item]}
-                  </Choice>
-                ))}
+                {COLORS.map((item) => {
+                  const active = color === item;
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setColor(item)}
+                      className={cn(
+                        "p-5 text-left border transition-all duration-150 active:scale-[0.98] flex items-center justify-between",
+                        active
+                          ? "border-gold bg-gold/15 text-bone ring-1 ring-gold shadow-[0_0_15px_rgba(201,162,75,0.25)]"
+                          : "border-line text-bone/70 hover:border-gold/50 hover:bg-white/5",
+                      )}
+                    >
+                      <div>
+                        <span className="block text-sm font-bold tracking-[0.14em] uppercase">{colorLabel[item]}</span>
+                        <span className="mt-1 block text-xs text-mist">
+                          {item === "noire" ? "Tissu noir profond" : "Coton blanc pur"}
+                        </span>
+                      </div>
+                      <span
+                        className={cn(
+                          "h-5 w-5 rounded-full border",
+                          item === "noire" ? "bg-black border-line" : "bg-white border-black/20",
+                        )}
+                      />
+                    </button>
+                  );
+                })}
               </div>
             </div>
+
+            {/* Bouton Continuer */}
             <button
               type="button"
               onClick={() => setStep(2)}
-              className="w-full bg-gold px-6 py-4 text-[11px] tracking-[0.22em] text-ink uppercase transition-all duration-150 hover:bg-gold/90 active:scale-[0.98] active:bg-gold/80"
+              className="w-full bg-gold py-4 px-6 text-center text-[12px] font-bold tracking-[0.24em] text-ink uppercase transition-all duration-150 hover:bg-gold/90 active:scale-[0.98] shadow-lg"
             >
-              Continuer →
+              Continuer vers le logo & taille →
             </button>
           </section>
         )}
 
+        {/* ======================================================== */}
+        {/* ÉTAPE 2 : LOGO & TAILLE                                  */}
+        {/* ======================================================== */}
         {step === 2 && (
           <section className="space-y-8">
+            {/* Choix du logo */}
             <div>
-              <h2 className="font-display text-3xl uppercase">Logo</h2>
-              <div className="mt-4 grid grid-cols-3 gap-3">
-                {LOGOS.map((item) => (
-                  <Choice key={item} active={logo === item} onClick={() => setLogo(item)}>
-                    {logoLabel[item]}
-                  </Choice>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="font-display text-2xl uppercase tracking-wider">Choisis ton logo</h2>
+                <span className="text-xs text-mist">
+                  Pour chemise {colorLabel[color].toLowerCase()} {sleeveLabel[sleeve].toLowerCase()}
+                </span>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {availableLogos.map((item) => {
+                  const active = logo === item;
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setLogo(item)}
+                      className={cn(
+                        "p-4 border text-left transition-all duration-150 active:scale-[0.98] flex items-center gap-4",
+                        active
+                          ? "border-gold bg-gold/15 text-bone ring-1 ring-gold shadow-[0_0_15px_rgba(201,162,75,0.25)]"
+                          : "border-line text-bone/70 hover:border-gold/50 hover:bg-white/5",
+                      )}
+                    >
+                      <div className="relative h-14 w-14 shrink-0 overflow-hidden bg-panel/80 p-2 border border-line">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={logoFile[item]}
+                          alt={logoLabel[item]}
+                          className={cn("h-full w-full object-contain", color === "noire" && item === "true" && "invert")}
+                        />
+                      </div>
+                      <div>
+                        <span className="block text-sm font-bold tracking-[0.14em] uppercase text-bone">
+                          Logo {logoLabel[item]}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-mist">
+                          {item === "horizon" && "Horizon d'or brodé au dos"}
+                          {item === "spirale" && "Spirale dorée brodée au dos"}
+                          {item === "true" && "TRUE brodé sur la poitrine"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Choix de la taille */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-display text-2xl uppercase tracking-wider">Choisis ta taille</h2>
+                <span className="text-xs text-gold">Taille sélectionnée : {size}</span>
+              </div>
+              <div className="grid grid-cols-6 gap-2">
+                {CHEMISE_SIZES.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setSize(option)}
+                    className={cn(
+                      "h-12 border text-sm font-semibold tracking-wider transition-all duration-150 active:scale-95",
+                      size === option
+                        ? "border-gold bg-gold text-ink font-bold shadow-[0_0_12px_rgba(201,162,75,0.4)]"
+                        : "border-line text-bone/80 hover:border-gold/50 hover:text-bone active:bg-white/5",
+                    )}
+                  >
+                    {option}
+                  </button>
                 ))}
               </div>
             </div>
-            <div className="flex gap-3">
+
+            {/* Boutons d'action */}
+            <div className="flex gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="border border-line px-6 py-4 text-[11px] tracking-[0.22em] uppercase transition-all duration-150 hover:border-gold/50 hover:text-bone active:scale-[0.97] active:bg-white/5"
+                className="border border-line px-6 py-4 text-[11px] tracking-[0.22em] uppercase transition hover:border-gold/60 hover:text-bone active:scale-[0.98]"
               >
                 ← Retour
               </button>
               <button
                 type="button"
                 onClick={() => setStep(3)}
-                className="flex-1 bg-gold px-6 py-4 text-[11px] tracking-[0.22em] text-ink uppercase transition-all duration-150 hover:bg-gold/90 active:scale-[0.98] active:bg-gold/80"
+                className="flex-1 bg-gold py-4 px-6 text-center text-[12px] font-bold tracking-[0.24em] text-ink uppercase transition-all duration-150 hover:bg-gold/90 active:scale-[0.98] shadow-lg"
               >
-                Continuer →
+                Continuer vers le paiement →
               </button>
             </div>
           </section>
         )}
 
+        {/* ======================================================== */}
+        {/* ÉTAPE 3 : PAIEMENT                                       */}
+        {/* ======================================================== */}
         {step === 3 && (
           <section className="space-y-6">
-            <div>
-              <h2 className="font-display text-3xl uppercase">Taille</h2>
-              <div className="mt-4 grid grid-cols-6 gap-2">
-                {CHEMISE_SIZES.map((item) => (
-                  <Choice key={item} active={size === item} onClick={() => setSize(item)}>
-                    {item}
-                  </Choice>
-                ))}
+            {/* Récapitulatif sélection */}
+            <div className="border border-gold/40 bg-gold/5 p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-mist uppercase tracking-wider">Ta sélection</p>
+                <p className="font-serif text-lg text-bone">
+                  Chemise {colorLabel[color].toLowerCase()} {sleeveLabel[sleeve].toLowerCase()} · Logo {logoLabel[logo]}
+                </p>
+                <p className="text-xs text-gold font-medium mt-0.5">
+                  Taille {size} · Pass complet 10 000 F CFA
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="text-xs text-gold underline underline-offset-4 hover:text-bone transition"
+              >
+                Modifier
+              </button>
             </div>
 
-            <div className="space-y-3">
-              <label className="block text-xs tracking-[0.18em] text-mist uppercase">
-                Nom (facultatif)
-                <input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" className="mt-2 w-full border border-line bg-transparent px-4 py-3 text-base text-bone outline-none focus:border-gold" />
-              </label>
-              <label className="block text-xs tracking-[0.18em] text-mist uppercase">
-                E-mail (pour recevoir ton billet)
-                <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" className="mt-2 w-full border border-line bg-transparent px-4 py-3 text-base text-bone outline-none focus:border-gold" />
-              </label>
-            </div>
+            {/* Coordonnées */}
+            <div className="space-y-4">
+              <h2 className="font-display text-2xl uppercase tracking-wider">Tes informations</h2>
 
-            <div>
-              <h2 className="font-display text-3xl uppercase">Paiement</h2>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <Choice active={method === "mixx"} onClick={() => setMethod("mixx")}>
-                  Mixx by Yas
-                </Choice>
-                <Choice active={method === "flooz"} onClick={() => setMethod("flooz")}>
-                  Flooz
-                </Choice>
-              </div>
-              <label className="mt-4 block text-xs tracking-[0.18em] text-mist uppercase">
-                Numéro mobile money (8 chiffres)
+              <div>
+                <label className="block text-xs tracking-[0.16em] text-mist uppercase mb-1.5">
+                  Nom complet (facultatif)
+                </label>
                 <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex : Koffi Mensah"
+                  autoComplete="name"
+                  className="w-full border border-line bg-transparent px-4 py-3 text-bone outline-none focus:border-gold transition"
+                />
+              </div>
+            </div>
+
+            {/* Mode de paiement */}
+            <div className="space-y-4 pt-2 border-t border-line">
+              <h2 className="font-display text-2xl uppercase tracking-wider">Paiement Mobile Money</h2>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMethod("mixx")}
+                  className={cn(
+                    "p-4 border text-left transition-all active:scale-[0.98]",
+                    method === "mixx"
+                      ? "border-gold bg-gold/15 text-bone ring-1 ring-gold"
+                      : "border-line text-bone/70 hover:border-gold/50",
+                  )}
+                >
+                  <span className="block text-sm font-semibold tracking-wide">Mixx by Yas</span>
+                  <span className="text-[11px] text-mist mt-1 block">Togocom</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setMethod("flooz")}
+                  className={cn(
+                    "p-4 border text-left transition-all active:scale-[0.98]",
+                    method === "flooz"
+                      ? "border-gold bg-gold/15 text-bone ring-1 ring-gold"
+                      : "border-line text-bone/70 hover:border-gold/50",
+                  )}
+                >
+                  <span className="block text-sm font-semibold tracking-wide">Flooz</span>
+                  <span className="text-[11px] text-mist mt-1 block">Moov Africa</span>
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-xs tracking-[0.16em] text-mist uppercase mb-1.5">
+                  Numéro Mobile Money (8 chiffres)
+                </label>
+                <input
+                  type="tel"
                   value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="90 12 34 56"
                   inputMode="numeric"
                   autoComplete="tel-national"
-                  placeholder="90 00 00 00"
-                  className="mt-2 w-full border border-line bg-transparent px-4 py-3 text-base text-bone outline-none focus:border-gold"
+                  className="w-full border border-line bg-transparent px-4 py-3 text-lg font-mono tracking-wider text-bone outline-none focus:border-gold transition"
                 />
-              </label>
-              <p className="mt-3 text-xs text-mist">Tu reçois la demande sur ton téléphone, puis tu valides avec ton code secret.</p>
+                <p className="mt-2 text-xs text-mist leading-relaxed">
+                  Tu recevras une notification sur ton téléphone pour valider le paiement avec ton code secret.
+                </p>
+              </div>
             </div>
 
+            {/* Message d'erreur */}
             {error && (
-              <p role="alert" className="border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm text-bone">
+              <div role="alert" className="border border-red-500/60 bg-red-500/10 p-4 text-sm text-red-200">
                 {error}
-              </p>
+              </div>
             )}
 
-            <div className="flex gap-3">
+            {/* Boutons d'action */}
+            <div className="flex gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="border border-line px-6 py-4 text-[11px] tracking-[0.22em] uppercase transition-all duration-150 hover:border-gold/50 hover:text-bone active:scale-[0.97] active:bg-white/5"
+                className="border border-line px-6 py-4 text-[11px] tracking-[0.22em] uppercase transition hover:border-gold/60 hover:text-bone active:scale-[0.98]"
               >
                 ← Retour
               </button>
+
               <button
                 type="button"
                 onClick={pay}
                 disabled={paying}
-                className="flex-1 bg-gold px-6 py-4 text-[11px] tracking-[0.22em] text-ink uppercase transition-all duration-150 hover:bg-gold/90 active:scale-[0.98] active:bg-gold/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
+                className="flex-1 bg-gold py-4 px-6 text-center text-[12px] font-bold tracking-[0.24em] text-ink uppercase transition-all duration-150 hover:bg-gold/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               >
                 {paying ? "Ouverture du paiement…" : `Payer ${PASS_PRICE.toLocaleString("fr-FR")} F CFA`}
               </button>

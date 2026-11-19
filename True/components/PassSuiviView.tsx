@@ -30,7 +30,6 @@ export function PassSuiviView({
   const [pass, setPass] = useState<PassData>(initialPass);
   const qrUrl = initialQrUrl ?? null;
   const [isPolling, setIsPolling] = useState(!initialPass.unlocked);
-  const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // Auto-polling for Mobile Money validation
@@ -73,27 +72,6 @@ export function PassSuiviView({
     navigator.clipboard?.writeText(pass.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }
-
-  async function handleDownload() {
-    setDownloading(true);
-    try {
-      const res = await fetch(`/api/passes/download?code=${encodeURIComponent(pass.code)}`);
-      if (!res.ok) throw new Error("download failed");
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `pass-true-${pass.code}.png`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch {
-      window.open(`/api/passes/download?code=${encodeURIComponent(pass.code)}`, "_blank");
-    } finally {
-      setDownloading(false);
-    }
   }
 
   return (
@@ -211,19 +189,6 @@ export function PassSuiviView({
 
       {/* Action Buttons */}
       <div className="mt-8 flex w-full flex-col gap-3">
-        {/* DOWNLOAD BUTTON */}
-        <button
-          type="button"
-          onClick={handleDownload}
-          disabled={downloading}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-gold py-4 text-xs font-semibold tracking-[0.22em] text-ink uppercase transition-transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          {downloading ? "Génération du billet…" : "Télécharger mon billet (PNG)"}
-        </button>
-
         {/* Continue installment payment if not fully paid */}
         {!pass.unlocked && (
           <Link

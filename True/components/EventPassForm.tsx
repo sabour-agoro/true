@@ -216,9 +216,21 @@ export function EventPassForm() {
                 </button>
               ))}
           </div>
-          <button type="button" disabled={!size} onClick={() => setStep(2)} className="mt-8 w-full bg-gold py-4 text-[12px] tracking-[0.24em] text-ink uppercase disabled:opacity-40">
-            {t.event.next}
+          <button
+            type="button"
+            onClick={() => {
+              if (!size) {
+                setError("Choisis une taille pour continuer");
+                return;
+              }
+              setError(null);
+              setStep(2);
+            }}
+            className="mt-8 w-full bg-gold py-4 text-[12px] font-bold tracking-[0.24em] text-ink uppercase transition-all hover:bg-gold/90 active:scale-[0.98]"
+          >
+            {t.event.next} →
           </button>
+          {!size && <p className="mt-2 text-center text-xs text-gold">Choisis une taille ci-dessus pour continuer</p>}
         </>
       )}
 
