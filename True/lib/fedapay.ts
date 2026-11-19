@@ -93,7 +93,8 @@ export async function createMobileCheckout({
     customer: {
       firstname: customer?.firstname || "Client",
       lastname: customer?.lastname || "TRUE",
-      email: customer?.email,
+      // FedaPay refuse une chaîne vide : on n'envoie le champ que s'il est rempli.
+      ...(customer?.email ? { email: customer.email } : {}),
       phone_number: { number: phone, country: "tg" },
     },
   };
