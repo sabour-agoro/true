@@ -142,7 +142,10 @@ export async function settlePass(code: string, sessionId?: string, txId?: string
         const session = await stripe.checkout.sessions.retrieve(sessionId);
         if (session.payment_status === "paid" && session.amount_total === pass.pending.amount) {
           const settled = await confirmPending(pass.code, sessionId, pass.pending.amount);
-          if (settled.pass && settled.justConfirmed) await sendPassMails(settled.pass).catch(() => false);
+          if (settled.pass && settled.justConfirmed) await sendPassMails(settled.pass).catch((error) => {
+            console.error("pass mail", error instanceof Error ? error.message : error);
+            return false;
+          });
           if (settled.pass) return publicPass(settled.pass);
         }
       } catch (error) {
@@ -162,7 +165,10 @@ export async function settlePass(code: string, sessionId?: string, txId?: string
     if (remote?.approved && remote.amount && codeMatch && sealMatch && isPassAmount(pass.paid, remote.amount)) {
       const method = remote.mode === "moov_tg" ? "flooz" : "mixx";
       const settled = await recordApproved(pass.code, { ref: checkTxId, amount: remote.amount, method });
-      if (settled.pass && settled.justConfirmed) await sendPassMails(settled.pass).catch(() => false);
+      if (settled.pass && settled.justConfirmed) await sendPassMails(settled.pass).catch((error) => {
+            console.error("pass mail", error instanceof Error ? error.message : error);
+            return false;
+          });
       if (settled.pass) return publicPass(settled.pass);
     }
   }
@@ -204,7 +210,10 @@ export async function applyApprovedPayment(entity: Record<string, unknown>) {
 
   const method = entity.mode === "moov_tg" ? "flooz" : "mixx";
   const settled = await recordApproved(pass.code, { ref: String(id), amount, method });
-  if (settled.pass && settled.justConfirmed) await sendPassMails(settled.pass).catch(() => false);
+  if (settled.pass && settled.justConfirmed) await sendPassMails(settled.pass).catch((error) => {
+            console.error("pass mail", error instanceof Error ? error.message : error);
+            return false;
+          });
   return Boolean(settled.pass);
 }
 

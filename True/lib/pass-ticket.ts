@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import QRCode from "qrcode";
 import { chemiseLabel } from "@/data/chemises";
+import { site } from "@/data/site";
 import { passQrPayload } from "@/lib/pass-seal";
 import type { Pass } from "@/lib/passes";
 
@@ -62,7 +63,7 @@ export async function generateTicketPng(pass: Pass): Promise<Buffer> {
 
     <!-- Date & Lieu -->
     <text x="90" y="605" font-family="sans-serif" font-size="13" fill="#71717a" letter-spacing="2">DATE &amp; LIEU</text>
-    <text x="90" y="635" font-family="sans-serif" font-size="18" fill="#f4f4f5">03 Janvier 2026 · Lomé, Togo</text>
+    <text x="90" y="635" font-family="sans-serif" font-size="18" fill="#f4f4f5">${site.eventDateLabel} · ${site.eventVenueLabel}</text>
 
     <line x1="80" y1="680" x2="720" y2="680" stroke="#27272a" stroke-dasharray="6,6" stroke-width="1"/>
 
