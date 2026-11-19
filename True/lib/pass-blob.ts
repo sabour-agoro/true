@@ -3,6 +3,14 @@ import type { Pass } from "@/lib/passes";
 
 const PATHNAME = "true-passes.json";
 
+// L'ETag renvoyé par le CDN est parfois entre guillemets (ou préfixé W/) :
+// on le normalise pour qu'il corresponde à celui attendu par `ifMatch`.
+function cleanEtag(value: string | null | undefined) {
+  if (!value) return null;
+  const trimmed = value.trim().replace(/^W\//i, "").replace(/^"|"$/g, "");
+  return trimmed || null;
+}
+
 function token() {
   const value = process.env.BLOB_READ_WRITE_TOKEN;
   if (!value) throw new Error("blob-config");
@@ -16,7 +24,7 @@ export async function readBlobPasses() {
     const parsed = JSON.parse(await new Response(result.stream).text()) as unknown;
     return {
       passes: Array.isArray(parsed) ? (parsed as Pass[]) : [],
-      etag: result.blob.etag,
+      etag: cleanEtag(result.blob.etag),
     };
   } catch (err) {
     console.error("readBlobPasses caught:", err instanceof Error ? err.message : err);
@@ -32,7 +40,7 @@ export async function writeBlobPasses(passes: Pass[], etag: string | null) {
       allowOverwrite: true,
       contentType: "application/json",
       token: token(),
-      ...(etag ? { ifMatch: etag } : {}),
+      ...(etag ? { ifMatch: cleanEtag(etag) ?? undefined } : {}),
     });
   } catch (err) {
     console.error("writeBlobPasses error:", err instanceof Error ? err.message : err);

@@ -100,7 +100,7 @@ async function writeStore(passes: Pass[], etag: string | null) {
 
 async function changePassFile<T>(change: (passes: Pass[]) => Promise<T> | T) {
   let lastError: unknown;
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
     const { passes, etag } = await readStore();
     const result = await change(passes);
     try {
@@ -109,6 +109,17 @@ async function changePassFile<T>(change: (passes: Pass[]) => Promise<T> | T) {
     } catch (error) {
       lastError = error;
     }
+  }
+  // Dernier recours : on relit la version la plus récente et on écrit sans
+  // condition. Sans cela, un ETag refusé par le stockage bloque tout paiement.
+  console.error("changePassFile conditional write failed, retrying without ifMatch");
+  const { passes } = await readStore();
+  const result = await change(passes);
+  try {
+    await writeStore(passes, null);
+    return result;
+  } catch (error) {
+    lastError = error;
   }
   throw lastError instanceof Error ? lastError : new Error("pass-store");
 }
