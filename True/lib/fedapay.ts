@@ -16,6 +16,16 @@ export function normalizeTogoPhone(value: string) {
   return /^\d{8}$/.test(digits) ? digits : null;
 }
 
+// Un espace ou un retour à la ligne collé avec la clé rend l'en-tête
+// Authorization invalide et FedaPay répond 401.
+function secretKey() {
+  const raw = process.env.FEDAPAY_SECRET_KEY ?? "";
+  const key = raw.trim();
+  if (!key) return { key: "", problem: "absente" as const };
+  const problem = key === raw ? null : ("espaces" as const);
+  return { key, problem };
+}
+
 function nestedId(payload: unknown) {
   if (!payload || typeof payload !== "object") return null;
   const record = payload as Record<string, unknown>;
@@ -61,8 +71,9 @@ export async function createMobileCheckout({
   customer?: { firstname: string; lastname: string; email?: string };
   custom_metadata?: Record<string, string>;
 }) {
-  const key = process.env.FEDAPAY_SECRET_KEY;
+  const { key, problem } = secretKey();
   if (!key) return { error: "config" as const };
+  if (problem) console.error("fedapay key", problem);
 
   const origin = requestOrigin(request);
   const callback = returnTo ?? `${origin}/panier/succes?provider=fedapay`;
@@ -121,7 +132,9 @@ export async function createMobileCheckout({
     createdBody = (await created.json().catch(() => null)) as unknown;
   }
   if (!created.ok) {
-    console.error("fedapay create", created.status, JSON.stringify(createdBody).slice(0, 240));
+    const prefix = key.slice(0, 8);
+    const shape = prefix === "sk_live_" ? "live" : prefix === "sk_sandbox_" ? "sandbox" : prefix === "pk_" ? "publique" : "inconnue";
+    console.error("fedapay create", created.status, `cle=${shape} longueur=${key.length}`, JSON.stringify(createdBody).slice(0, 200));
     return { error: created.status === 401 ? ("auth" as const) : ("fedapay" as const), reason: `create ${created.status}` };
   }
 
@@ -159,7 +172,7 @@ export type FedaPayTxn = {
 };
 
 export async function searchFedaPayTransactions() {
-  const key = process.env.FEDAPAY_SECRET_KEY;
+  const { key } = secretKey();
   if (!key) return [];
   const response = await fetch(`${fedapayBase()}/transactions/search?per_page=100`, {
     headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
@@ -191,7 +204,7 @@ export async function searchFedaPayTransactions() {
 }
 
 export async function readFedaPayStatus(id: string) {
-  const key = process.env.FEDAPAY_SECRET_KEY;
+  const { key } = secretKey();
   if (!key) return null;
   const response = await fetch(`${fedapayBase()}/transactions/${id}`, {
     headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
